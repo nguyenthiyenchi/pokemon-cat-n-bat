@@ -5,48 +5,109 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, ElementNotInteractableException
+
 from bs4 import BeautifulSoup
+import time
+import random
 
+all_types = {
+    'normal': 0,
+    'fighting': 0,
+    'flying': 0,
+    'poison': 0,
+    'ground': 0,
+    'rock': 0,
+    'bug': 0,
+    'ghost': 0,
+    'steel': 0,
+    'fire': 0,
+    'water': 0,
+    'grass': 0,
+    'electric': 0,
+    'psychic': 0,
+    'ice': 0,
+    'dragon': 0,
+    'dark': 0,
+    'fairy': 0,
+    'stellar': 0,
+    'shadow': 0
+}
 
-def fetch_page_with_selenium(url):
+def fetch_page_with_selenium():
     options = webdriver.ChromeOptions()
-    # options.add_argument('--headless') 
+    options.add_argument('--headless') 
     options.add_argument('--disable-cache')  # Disable caching
     options.add_argument('--disk-cache-size=0')  # Set disk cache size to 0
     options.add_argument('--disable-application-cache')  # Disable application cache
     options.add_argument('--disable-gpu')  # Disable GPU usage
     options.add_argument('--disable-dev-shm-usage')  # Disable /dev/shm usage
     options.add_argument('--no-sandbox')  # Disable sandbox
-    # options.add_experimental_option('prefs', {'cache.disable': True, 'disk_cache_size': 0})  # Disable browser cache
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
-    # Now navigate to the target URL
-    driver.get(url)
-    driver.refresh()
-    
-    # Refresh the page to trigger dynamic loading
-    driver.get(url)
-    driver.refresh()
+    # Now navigate to the main page
+    driver.get('https://pokedex.org/#/')
+
 
     try:
-        WebDriverWait(driver, 2).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '.detail-panel:not(.hidden)'))
+        # Wait for the Pokémon buttons to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.monster-sprite'))
         )
-    except TimeoutException:
-        print("Element not found, refreshing page...")
-        driver.refresh()
 
-    page_source = driver.page_source
-    driver.quit()
+        # # Find all child elements of id "monsters-list" with type "button" and class "monster-sprite" 
+        pokemon_buttons = driver.find_elements(By.CSS_SELECTOR, '#monsters-list button.monster-sprite')
 
-    return page_source
+        # Another way to get the buttons
+        # pokemon_buttons = driver.find_elements(By.XPATH, '//button[contains(@class, "monster-sprite")]')
+
+        print(len(pokemon_buttons))
+        random.shuffle(pokemon_buttons)
+
+        pokedata = []
+        for i in range (len(pokemon_buttons)):
+            button = pokemon_buttons[i]
+            try:
+                WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable(button)
+                )
+                button.click()
+                time.sleep(1)  # Allow some time for the page to load
+            
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '.detail-panel:not(.hidden)'))
+                    )
+                except TimeoutException:
+                    print("Element not found, refreshing page...")
+                    driver.refresh()
+                    continue
+
+                # Get the page source after clicking the button
+                page_source = driver.page_source
+
+                # Parse the page source with BeautifulSoup
+                soup = BeautifulSoup(page_source, 'html.parser')
+
+                # Extract Pokémon data
+                pokemon = extract_pokemon_data(soup)
+                if (len(pokemon)) > 0:
+                    pokedata.append(pokemon)
+                driver.get('https://pokedex.org/#/')
+            except (ElementClickInterceptedException, ElementNotInteractableException, TimeoutException) as e:
+                print(f"Error occurred while interacting with element: {e}")
+
+    finally:
+        driver.quit()
+
+    return pokedata
 
 def extract_pokemon_data(soup):
-    # pokemon_data = []
     pokemon = soup.select_one('.detail-panel:not(.hidden)')
 
-    print(pokemon)
+    if not pokemon:
+        return {}
+
     name = pokemon.select_one('.detail-panel-header').text.strip()
     stats = {stat.select_one('span').text.strip(): stat.select_one('.stat-bar-fg').text.strip() for stat in pokemon.select('.detail-stats-row')}
     species = pokemon.select_one('.monster-species').text.strip()
@@ -60,7 +121,16 @@ def extract_pokemon_data(soup):
     hatch_steps = profile_data[5].text.strip()
     abilities = profile_data[6].text.strip().split(',')
     evs = profile_data[7].text.strip()
-    types = [type_tag.text.strip() for type_tag in pokemon.select('.monster-type')]
+    types = [type_tag.text.strip() for type_tag in pokemon.select('.detail-types .monster-type')]
+    
+    for type in types:
+        if (all_types[type] >= 5):
+            empty_dict = {}
+            return empty_dict
+    
+    # Add pokemon to its type's categories
+    for type in types:
+        all_types[type] += 1
     
     when_attacked = []
     for attack_row in pokemon.select('.when-attacked-row'):
@@ -96,54 +166,16 @@ def extract_pokemon_data(soup):
         'image': None,
         'exp': None
     }
-    
-    # pokemon_data.append(pokemon_dict)
-    
+
     return pokemon_dict
 
 def main():
+    pokedata = fetch_page_with_selenium()
 
-
-    types = {
-        'normal': 0,
-        'fighting': 0,
-        'flying': 0,
-        'poison': 0,
-        'ground': 0,
-        'rock': 0,
-        'bug': 0,
-        'ghost': 0,
-        'steel': 0,
-        'fire': 0,
-        'water': 0,
-        'grass': 0,
-        'electric': 0,
-        'psychic': 0,
-        'ice': 0,
-        'dragon': 0,
-        'dark': 0,
-        'fairy': 0,
-        'stellar': 0,
-        'shadow': 0
-    }
-    pokedata = []
-
-
-    for order in range (1, 3):
-        url = "https://pokedex.org/#/pokemon/" + str(order) 
-        print(url)
-        page_source = fetch_page_with_selenium(url)
-        soup = BeautifulSoup(page_source, 'html.parser')
-        # print(soup)
-
-        pokemon = extract_pokemon_data(soup)
-        pokedata.append(pokemon)
-        # with open('./{}.txt'.format("pokemon_data" + str(order)), mode='wt', encoding='utf-8') as file:
-        #     file.write(str(soup))
-    
     with open('pokemon_data.json', 'w') as f:
         json.dump(pokedata, f, indent=4)
     print("Pokemon data added to pokemon_data.json\n")
 
 if __name__ == "__main__":
     main()
+    print(all_types)
