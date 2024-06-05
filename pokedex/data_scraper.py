@@ -51,22 +51,25 @@ def fetch_page_with_selenium():
     driver.get('https://pokedex.org/#/')
 
     try:
-        # Wait for the Pokémon buttons to load
+        # Wait for the Pokémon <button> with class name 'monster-sprite' to load
         WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.monster-sprite'))
         )
+        # If it out of 10 seconds, but the HTML Inspect of page hasn't loaded, move to finally part of this function
+        
         pokedata = []
-        all_buttons = []
+        all_buttons = [] # all <button> attributes have class 'monster-sprite' that have clicked
         scroll_pause_time = 2 # Time to wait after each scroll
+        
         # Get the height of a pokemon button
         button_height = driver.execute_script("return document.querySelector('#monsters-list button.monster-sprite').offsetHeight")
+        
         # Initially scroll down a bit
         current_height = button_height*1.5
 
         batch_count = 0
         # Find all child elements of id "monsters-list" with type "button" and class "monster-sprite" 
         driver.execute_script("window.scrollBy(0, arguments[0]);", current_height)
-
 
         while True:
             # Find the pokemon button's element in the html source
@@ -78,13 +81,16 @@ def fetch_page_with_selenium():
             
             # Get the number of buttons and looping through them
             print("Batch " + str(batch_count) + ": " + str(len(pokemon_buttons)))
+            
             for i in range (30): # The number of button to click
                 # Take the actual button
                 button = pokemon_buttons[i]
+                
                 # Check if the button was clicked or not
                 if button not in all_buttons:
                     # If not, add it to the list of clicked buttons
                     all_buttons.append(button)
+                    
                     try: 
                         # Wait at most 5s to make sure that button is clickable
                         WebDriverWait(driver, 5).until(
@@ -95,8 +101,9 @@ def fetch_page_with_selenium():
                         button.click()
                         print("Pokemon " + str(i+1) + " is clicked")
                         time.sleep(1)  # Allow some time for the page to load
-                        #Wait at most 10s for the detail panel to load and show up
+                        
                         try:
+                            #Wait at most 10s for the detail panel to load and show up
                             WebDriverWait(driver, 10).until(
                                 EC.presence_of_element_located((By.CSS_SELECTOR, '.detail-panel:not(.hidden)'))
                             )
@@ -105,10 +112,12 @@ def fetch_page_with_selenium():
                             # driver.refresh()
                             continue
 
-                        # Get the page source after clicking the button
+                        # Get the page source after clicking the button (F12 on keyboard)
                         page_source = driver.page_source
+                        
                         # Parse the page source with BeautifulSoup
                         soup = BeautifulSoup(page_source, 'html.parser')
+                        
                         # Extract Pokémon data
                         pokemon = extract_pokemon_data(soup)
                         if (len(pokemon)) > 0:
@@ -121,10 +130,13 @@ def fetch_page_with_selenium():
 
                         # Scroll the website back to the current height, from the top of the website
                         driver.execute_script("window.scrollBy(0, arguments[0]);", current_height)
+                        
                         # Wait for new content to load
                         time.sleep(scroll_pause_time)
+                        
                         # Reload the buttons to use inside the for loop
                         pokemon_buttons = driver.find_elements(By.CSS_SELECTOR, '#monsters-list button.monster-sprite')
+                        
                     except (ElementClickInterceptedException, ElementNotInteractableException, StaleElementReferenceException, TimeoutException) as e:
                         print(f"Error occurred while interacting with element: {e}")
                         print(button)
@@ -143,11 +155,11 @@ def fetch_page_with_selenium():
             if new_buttons == pokemon_buttons:
                 print("Done")
                 break  # Break the loop if no new buttons are loaded
-
-
+            
     finally:
         driver.quit()
 
+    # Random to save in json not in order
     random.shuffle(pokedata)
 
     return pokedata
@@ -159,10 +171,15 @@ def extract_pokemon_data(soup):
         return {}
 
     # Extracting data:
+    # - Name
     name = pokemon.select_one('.detail-panel-header').text.strip()
+    
+    # - HP, Attack, Defense, Speed, Sp Atk, Sp Def
     stats = {stat.select_one('span').text.strip(): stat.select_one('.stat-bar-fg').text.strip() for stat in pokemon.select('.detail-stats-row')}
-    species = pokemon.select_one('.monster-species').text.strip()
+
+    species = pokemon.select_one('.monster-species').text.strip()    
     description = pokemon.select_one('.monster-description').text.strip()
+    
     profile_data = pokemon.select('.monster-minutia span')
     height = profile_data[0].text.strip()
     weight = profile_data[1].text.strip()
@@ -172,12 +189,15 @@ def extract_pokemon_data(soup):
     hatch_steps = profile_data[5].text.strip()
     abilities = profile_data[6].text.strip().split(',')
     evs = profile_data[7].text.strip()
+    
+    # - Elemental Types
     types = [type_tag.text.strip() for type_tag in pokemon.select('.detail-types .monster-type')]
 
     for type in types:
         if (all_types[type] >= 5):
             empty_dict = {}
             return empty_dict
+        
     # Add pokemon to its type's categories
     for type in types:
         all_types[type] += 1
