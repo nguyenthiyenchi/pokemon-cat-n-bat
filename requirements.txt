@@ -1,1 +1,3 @@
 flask
+
+includes all necessary Python packages for running the project.
