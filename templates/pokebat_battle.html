@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Battle Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container-battle">
+        <div class="panel player-selection">
+            <p id="playerName">Player name</p>
+            <h2>Pokemon Name</h2>
+            <div class="pokemon-info">
+                <button class="pokemon" id="pokemon-1">
+                    <div class="pokemon-image" style="background-image: #B22222;"></div>
+                    <div class="pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+                <button class="pokemon" id="pokemon-2">
+                    <div class="pokemon-image" style="background-image: #1E90FF;"></div>
+                    <div class="pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+                <button class="pokemon" id="pokemon-3">
+                    <div class="pokemon-image" style="background-image: #32CD32;"></div>
+                    <div class="pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+            </div>
+            <div class="buttons-and-status">
+                <button class="attack" id="attack-btn">Attack</button>
+                <button class="log-out">Log Out</button>
+            </div>  
+        </div>
+        <div class="panel battle-logs">
+            <p>Battle Details</p>
+            <h2>Battle Logs</h2>
+            <div class="logs" id="battle-logs">
+
+            </div>
+        </div>
+        <div class="panel opponent">
+            <p id="opponentName">Opponent name</p>
+            <h2>Pokemon Name</h2>
+            <div class="opponent-pokemon-info">
+                <button class="opponent-pokemon" id="opponent-pokemon-1">
+                    <div class="pokemon-image" style="background-image: #B22222;"></div>
+                    <div class="opponent-pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+                <button class="opponent-pokemon" id="opponent-pokemon-2">
+                    <div class="pokemon-image" style="background-image: #1E90FF;"></div>
+                    <div class="opponent-pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+                <button class="opponent-pokemon" id="opponent-pokemon-3">
+                    <div class="pokemon-image" style="background-image: #32CD32;"></div>
+                    <div class="opponent-pokemon-details">
+                        <p class="pokemon-name">Name: Pikahahaha</p>
+                        <p class="pokemon-hp">HP: XX/YY</p>
+                    </div>
+                </button>
+            </div>
+            <!-- <div class="buttons-and-status" > 
+                <button class="opponent-status">In Battle ...</button>
+            </div> -->
+        </div>
+        <script src ="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+        <!-- <script src="{{ url_for('static', filename='script.js') }}"></script> -->
+        <script>
+            const username = sessionStorage.getItem('username');
+            const socket = io();
+            socket.emit('connect_battle', username);
+
+            // const selectedPokemons = sessionStorage.getItem(`selectedPokemons_${username}`)
+            const pokemonElements = document.getElementsByClassName('pokemon')
+            const opponent_pokemonElements = document.getElementsByClassName('opponent-pokemon')
+            
+            socket.emit('get_players_name', { username: username });
+            socket.on('return_players_name', (data) => {
+                const { opponentName } = data;
+                document.querySelector('#playerName').textContent = username;
+                document.querySelector('#opponentName').textContent = opponentName;
+            });
+
+            fetch(`/get_battle_pokemon_list/${username}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                    } else {
+                        console.log(username);
+                        console.log('User Pokemon data:')
+                        populatePokemonElements(data, false);
+                    }
+                })
+                .catch(error => console.error('Fetch error:', error));
+
+            fetch(`/get_battle_opponent_pokemon_list/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                    } else {
+                        console.log('Opponent Pokemon data');
+                        populatePokemonElements(data, true);
+                    }
+                })
+                .catch(error => console.error('Fetch error:', error));
+
+            function populatePokemonElements(data, isOpponent) {
+                const pokemonData = JSON.parse(data)
+                const pokemonElements = isOpponent ? [
+                    document.getElementById('opponent-pokemon-1'),
+                    document.getElementById('opponent-pokemon-2'),
+                    document.getElementById('opponent-pokemon-3')
+                ] : [
+                    document.getElementById('pokemon-1'),
+                    document.getElementById('pokemon-2'),
+                    document.getElementById('pokemon-3')
+                ];
+
+                for (let i = 0; i < pokemonElements.length; i++) {
+                    const pokemonElement = pokemonElements[i];
+                    const nameElement = pokemonElement.querySelector('.pokemon-name');
+                    const hpElement = pokemonElement.querySelector('.pokemon-hp');
+                    const imageElement = pokemonElement.querySelector('.pokemon-image');
+
+                    console.log(typeof(pokemonData))
+                    console.log(pokemonData)
+
+                    if (nameElement && pokemonData[i]) {
+                        nameElement.textContent = pokemonData[i].name;
+                    }
+                    if (hpElement && pokemonData[i]) {
+                        hpElement.textContent = pokemonData[i].hp;
+                    }
+                    if (imageElement && pokemonData[i]) {
+                        imageElement.style.backgroundImage = `url(${pokemonData[i].image})`;
+                        imageElement.style.backgroundSize = 'cover';
+                        imageElement.style.backgroundPosition = 'center';
+                    }
+                }
+            }
+
+            socket.on('turn_change', (data) => {
+                const { current_turn } = data;
+                if (current_turn == username) {
+                    document.getElementById('attack-btn').disabled = false;
+                    document.getElementById('pokemon-2').disabled = false;
+                    document.getElementById('pokemon-3').disabled = false;
+                } else {
+                    console.log("disable")
+                    document.getElementById('attack-btn').disabled = true;
+                    document.getElementById('pokemon-2').disabled = true;
+                    document.getElementById('pokemon-3').disabled = true;
+                }
+            });
+
+            // Handle attack   
+            document.getElementById('attack-btn').addEventListener('click', () => {
+                socket.emit('attack', { username: username });
+            });
+
+            // // Adding event listener to each element with class 'pokemon-switch'
+            // const switchElements = document.querySelectorAll('.pokemon-switch');
+            // switchElements.forEach(element => {
+            //     element.addEventListener('click', (event) => {
+            //         const clickedElement = event.currentTarget;
+            //         const pokemonName = clickedElement.querySelector('.pokemon-name').textContent;
+            //         const pokemonHp = clickedElement.querySelector('.pokemon-hp').textContent;
+
+            //         console.log(`Pokemon Name: ${pokemonName}`);
+            //         console.log(`Pokemon HP: ${pokemonHp}`);
+
+            //         // Sending message to server to update user's pokemon list in server
+            //         socket.emit('switch', { username: username, pokemonName: pokemonName, pokemonHP: pokemonHp});
+            //     });
+            // });
+
+
+            socket.on('pokemon_switched', (data) => {
+                const data_username = data.username;
+                const pokemonName = data.pokemon;
+
+                if (data_username === username) {
+                    updatePokemonInfo(pokemonName, false);
+                    addLog(`${username} switched to ${pokemonName}`);
+                } else {
+                    updatePokemonInfo(pokemonName, true);
+                    addLog(`${username} switched to ${pokemonName}`);
+                }
+            });
+
+            // This function swap info of the input pokemon with 
+            // the default pokemon, working inside html only
+            function updatePokemonInfo(pokemonName, isOpponent) {
+                const pokemonElements = isOpponent ? [
+                    document.getElementById('opponent-pokemon-1'),
+                    document.getElementById('opponent-pokemon-2'),
+                    document.getElementById('opponent-pokemon-3')
+                ] : [
+                    document.getElementById('pokemon-1'),
+                    document.getElementById('pokemon-2'),
+                    document.getElementById('pokemon-3')
+                ];
+                var pos = 0
+                if (pokemonElements[1].querySelector('.pokemon-name').textContent == pokemonName) {
+                    pos = 1;
+                } else {
+                    pos = 2;
+                }
+                const temp = pokemonElements[0].innerHTML;
+                pokemonElements[0].innerHTML = pokemonElements[pos].innerHTML;
+                pokemonElements[pos].innerHTML = temp;
+            }
+
+            socket.on('attack_result', (data) => {
+                console.log("Received attack_result")
+                const { attacker, defender, attack_type, damage, defender_hp } = data;
+                console.log(`${attacker} used ${attack_type} attack on ${defender}, dealing ${damage} damage. ${defender}'s Pokémon has ${defender_hp} HP left.`)
+                addLog(`${attacker} used ${attack_type} attack on ${defender}, dealing ${damage} damage. ${defender}'s Pokémon has ${defender_hp} HP left.`);
+                if (username == attacker) {
+                    const defaultPokemonElement = document.getElementById('opponent-pokemon-1');
+                    const hpElement = defaultPokemonElement.querySelector('.pokemon-hp');
+                    if (hpElement) {
+                        hpElement.textContent = defender_hp;
+                    }
+                } else {
+                    console.log("check1")
+                    // const defaultPokemonElement = docuemt.getElementById('pokemon-1');
+                    // const hpElement = defaultPokemonElement.querySelector('.pokemon-hp');
+                    var pokemonHpElement = document.querySelector('#pokemon-1 .pokemon-hp');
+                    if (pokemonHpElement) {
+                        console.log("check2")
+                        pokemonHpElement.textContent = defender_hp;
+                    }
+                    
+                }
+            });
+
+            socket.on('pokemon_fainted', (data) => {
+                const { username, pokemon } = data;
+                addLog(`${username}'s Pokémon ${pokemon} fainted.`);
+            });
+
+            // Handle switch pokemon
+            document.getElementById('pokemon-2').addEventListener('click', (event) => {
+                const clickedElement = event.currentTarget;
+                const nameElement = clickedElement.querySelector('.pokemon-name');
+                const switchPokemonName = nameElement.textContent;
+                const hpElement = clickedElement.querySelector('.pokemon-hp');
+                
+                // Check for dead pokemon
+                if (hpElement.textContent != '0') {
+                    console.log("Player one to switch to: ");
+                    console.log(switchPokemonName);
+                    socket.emit('switch_pokemon', { username: username, pokemonName: switchPokemonName });
+                }
+            });
+            document.getElementById('pokemon-3').addEventListener('click', (event) => {
+                const clickedElement = event.currentTarget;
+                const nameElement = clickedElement.querySelector('.pokemon-name');
+                const switchPokemonName = nameElement.textContent;
+                const hpElement = clickedElement.querySelector('.pokemon-hp');
+
+                // Check for dead pokemon
+                if (hpElement.textContent != '0') {
+                    console.log("Player one to switch to: ");
+                    console.log(switchPokemonName);
+                    socket.emit('switch_pokemon', { username: username, pokemonName: switchPokemonName });
+                }
+            });
+
+            socket.on('game_over', (data) => {
+                const { winner, loser } = data;
+                document.getElementById('attack-btn').disabled = true;
+                document.getElementsByClassName('pokemon').disabled = true
+                document.getElementsByClassName('opponent-pokemon').disabled = true
+                addLog(`Game Over! ${winner} wins against ${loser}.`);
+                alert(`Game Over! ${winner} wins against ${loser}.`);
+            });
+
+            function addLog(message) {
+                const logElement = document.createElement('p');
+                logElement.textContent = message;
+                document.getElementById('battle-logs').appendChild(logElement);
+                document.getElementById('battle-logs').scrollTop = document.getElementById('battle-logs').scrollHeight;
+            }
+        </script>
+    </div>
+
+</body>
+</html>
