@@ -18,6 +18,9 @@ PIN = "netcentriclab"
 PLAYERS_FILE = 'players.json'
 PLAYERS_POKEMON_FOLDER = 'players_pokemon'
 
+# Store captured Pokemon data
+captured_pokemon = []
+
 # Store spawned Pokemon data
 spawned_pokemon = []
 
@@ -159,10 +162,51 @@ def save_pokemon_data():
 @app.route('/capture', methods=['POST'])
 def capture():
     data = request.get_json()
-    captured_pokemons.append(data)
+    # captured_pokemon.append(data)
     global pokemons
-    pokemons = [p for p in pokemons if not (p['x'] == data['x'] and p['y'] == data['y'])]
+    # pokemons = [p for p in pokemons if not (p['x'] == data['x'] and p['y'] == data['y'])]
     return jsonify({"status": "success", "data": data})
+
+@socketio.on('captured_new_pokemon')
+def handle_captured_new_pokemon(data):
+    print('captured_new_pokemon')
+    global captured_pokemon
+    # Load the Pokémon data from the JSON file
+    name = data.get('username')
+    pin = data.get('pin')
+    pokemon_data = None
+    with open('pokemon_data_full.json', 'r') as f:
+        pokemon_data = json.load(f)
+
+    # Select a random Pokémon
+    # Make sure that the pokemon doesn't duplicate
+    random_pokemon = random.choice(pokemon_data)
+    while random_pokemon in captured_pokemon:
+        random_pokemon = random.choice(pokemon_data)
+    captured_pokemon.append(random_pokemon)
+
+    # Create a name_PIN.json file in players_pokemon folder
+    os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
+    namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
+
+    # # Check if the file exists
+    # if os.path.exists(namePIN_file_path):
+    #     # If the file exists, load its current data and append the new Pokémon
+    #     with open(namePIN_file_path, 'r') as f:
+    #         current_data = json.load(f)
+    #     print("Current data before append:", current_data)
+    #     if not isinstance(current_data, list):
+    #         current_data = [current_data]
+    #     current_data.append(random_pokemon)
+    #     print("Current data after append:", current_data)
+    #     # Write the updated data back to the file
+    #     with open(namePIN_file_path, 'a') as f:
+    #         json.dump(current_data, f, indent=4)
+    # else:
+    #     # If the file does not exist, create a new file and write the new Pokémon data
+    with open(namePIN_file_path, 'w') as f:
+        json.dump(captured_pokemon, f, indent=4)
+
 
 # ----------- PLAYER --------------
 
@@ -474,6 +518,8 @@ def handle_attack(data):
             for i, poke in enumerate(users[attacker_order].pokemon_list):
                 new_exp = int(users[attacker_order].pokemon_list[i].exp) + int(accumulated_exp/3)
                 users[attacker_order].pokemon_list[i].exp = str(new_exp)
+                # Missing updating data to the json file
+
 
     # Switch turns
     current_turn = defender.name
