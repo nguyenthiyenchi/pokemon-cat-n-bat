@@ -6,6 +6,7 @@
     <title>Server</title>
     <style>
         body {
+            background-image: url('/static/pokebat_background.jpg');
             display: flex;
             margin: 0;
             height: 100vh;
@@ -16,10 +17,11 @@
             width: 80%;
             overflow: auto;
             position: relative;
-            border: 2px solid black;
+            border: 2px solid darkgreen;
         }
 
         .grid {
+            opacity: 0.7;
             display: grid;
             grid-template-columns: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
             grid-template-rows: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */

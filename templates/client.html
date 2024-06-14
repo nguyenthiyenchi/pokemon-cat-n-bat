@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
     <style>
         body {
+            background-image: url('/static/pokebat_background.jpg');
             display: flex;
             margin: 0;
             height: 100vh;
@@ -15,14 +16,74 @@
         }
 
         .container,
-        .input-section {
+        .input-panel {
             width: 100%;
             overflow: auto;
             position: relative;
-            border: 2px solid black;
+            border: 2px solid darkgreen;
+        }
+
+        .input-panel{       
+            width: 100%;   
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 30%;
+        }
+
+        .input-section h1 {
+            font-size: 40px;
+            margin-bottom: 20px;
+            color: darkgreen;
+        }
+
+        .input-section input {
+            display: block;
+            width: calc(100% - 40px);
+            padding: 15px;
+            font-size: 16px;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+        }
+
+        .input-section input[type="color"] {
+            width: 30%;
+            padding: 0 10px;
+        }
+
+        .input-section button {
+            padding: 16px;
+            width: 40%;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+
+        .input-section button:hover {
+            background-color: #218838;
+        }
+
+        .input-section #error-message {
+            color: red;
+            margin-top: 10px;
         }
 
         .grid {
+            opacity: 0.7;
             display: grid;
             grid-template-columns: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
             grid-template-rows: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
@@ -56,14 +117,16 @@
 </head>
 <body>
     <!-- This is for players to signup/login -->
-    <div id="input-section">
-        <h1>Enter your details:</h1>
-        <input type="text" id="name-input" placeholder="Enter your name">
-        <input type="password" id="password-input" placeholder="Enter your password">
-        <input type="text" id="pin-input" placeholder="Enter PIN (if you have one)">
-        <input type="color" id="color-input" value="#000000">
-        <button onclick="submitDetails()">Submit</button>
-        <div id="error-message" style="color: red;"></div>
+    <div class="input-panel" id="input-panel">
+        <div class="input-section" id="input-section">
+            <h1>Enter your details:</h1>
+            <input type="text" id="name-input" placeholder="Enter your name">
+            <input type="password" id="password-input" placeholder="Enter your password">
+            <input type="text" id="pin-input" placeholder="Enter PIN (if you have one)">
+            <input type="color" id="color-input" value="#000000">
+            <button onclick="submitDetails()">Submit</button>
+            <div id="error-message" style="color: red;"></div>
+        </div>
     </div>
 
     <div class="container" id="container" style="display: none;">
@@ -110,7 +173,7 @@
             const result = await response.json();
             if (result.unique) {
                 socket.emit('client_connected', { name: name, password: hashedPassword, color: color, pin: pin });
-                document.getElementById('input-section').style.display = 'none';
+                document.getElementById('input-panel').style.display = 'none';
                 document.getElementById('container').style.display = 'block';
                 // document.getElementById('logout-button').style.display = 'block';
                 // document.getElementById('delete-button').style.display = 'block';
@@ -235,7 +298,7 @@
                 }).then(response => response.json())
                   .then(data => console.log('Captured:', data))
                   .catch(error => console.error('Error capturing pokemon:', error));
-                  
+
                 newCell.removeChild(pokemon); // Remove the Pokémon
 
                 // Add a new element to the same cell
