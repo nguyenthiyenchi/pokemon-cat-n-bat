@@ -86,6 +86,7 @@
         let playerPokemonCount = 0;
         let playerColor = ""; // Default player color        
         let playerName = ""; 
+        var playerPin;
 
         async function submitDetails() {
             const nameInput = document.getElementById('name-input');
@@ -96,6 +97,7 @@
             const name = nameInput.value;
             const password = passwordInput.value;
             const pin = pinInput.value;
+            playerPin = pin;
             const hashedPassword = CryptoJS.SHA256(password).toString();
             const color = colorInput.value;
 
@@ -194,7 +196,6 @@
                 body: JSON.stringify({name: playerName, position: playerPosition, color: playerColor})
             }).then(response => response.json())
               .catch(error => console.error('Error updating player position:', error));
-            
         }
 
         // Function to move the player
@@ -243,6 +244,8 @@
                 newElement.classList.add('new-child-class');
                 newElement.textContent = ''; // 
                 newCell.appendChild(newElement);
+
+                socket.emit('captured_new_pokemon', { username: playerName, pin: playerPin });
             }
 
             // Scroll the container to keep the player in view
