@@ -499,6 +499,17 @@ def handle_attack(data):
             print('game_over')
             emit('game_over', {'winner': attacker_username, 'loser': defender.name}, broadcast=True)
             # Give the pokemons of winner exps
+            accumulated_exp = 0
+            for poke in users[defender_order].pokemon_list:
+                accumulated_exp += int(poke.exp)
+            
+            for i, poke in enumerate(users[attacker_order].pokemon_list):
+                new_exp = int(users[attacker_order].pokemon_list[i].exp) + int(accumulated_exp/3)
+                users[attacker_order].pokemon_list[i].exp = str(new_exp)
+            # Missing updating data to the json file
+            namePIN_file_path = f"{attacker_username}.json"
+            with open(namePIN_file_path, 'w') as f:
+                json.dump(users[attacker_order].pokemon_list, f)  # Write an empty list to the file
         else:
             for i, poke in enumerate(defender.pokemon_list):
                 # If there is an alive pokemon,
@@ -507,18 +518,11 @@ def handle_attack(data):
                     temp = users[defender_order].pokemon_list[0]
                     users[defender_order].pokemon_list[0] = users[defender_order].pokemon_list[i]
                     users[defender_order].pokemon_list[i] = temp
+
                     break
             emit('pokemon_switched', {'username': defender.name, 'pokemon':  users[defender_order].pokemon_list[0].name}, broadcast=True)
             print('switched')
-            #Get exp from loser
-            accumulated_exp = 0
-            for poke in users[defender_order].pokemon_list:
-                accumulated_exp += int(poke.exp)
-            #
-            for i, poke in enumerate(users[attacker_order].pokemon_list):
-                new_exp = int(users[attacker_order].pokemon_list[i].exp) + int(accumulated_exp/3)
-                users[attacker_order].pokemon_list[i].exp = str(new_exp)
-                # Missing updating data to the json file
+            
 
 
     # Switch turns
