@@ -1,14 +1,223 @@
-import random
-import time
-from flask import Flask, json, redirect, render_template, request, jsonify, url_for
+import random, time, json, hashlib, os
+from flask import Flask, json, redirect, render_template, request, session, jsonify, url_for
 from flask_socketio import SocketIO, disconnect, emit
 from pokebat.player import Player 
 from pokebat.pokebat import PokeBat
 from pokebat.pokemon import Pokemon
-import json
+from functools import wraps
+from datetime import datetime
+from threading import Timer
 
-app = Flask(__name__)
+app = Flask("Pokemon-Cat-n-Bat")
+app.secret_key = '8hp507'
 socketio = SocketIO(app)
+
+# ------------------ POKEMON CATCHING ---------------------
+
+PIN = "netcentriclab"  
+PLAYERS_FILE = 'players.json'
+PLAYERS_POKEMON_FOLDER = 'players_pokemon'
+
+# Store spawned Pokemon data
+spawned_pokemon = []
+
+# Store joined players data
+joined_player = []
+
+# Load clients from file JSON
+def load_players():
+    try:
+        with open(PLAYERS_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+    
+# Save clients to file JSON
+def save_players(player):
+    with open(PLAYERS_FILE, 'w') as f:
+        json.dump(player, f, indent=4)
+
+players = load_players()
+
+# Flag to indicate if session should be cleared
+app.config['CLEAR_SESSION'] = True
+
+def verify_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'verified' not in session:
+            return redirect(url_for('verify'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/verify', methods=['GET', 'POST'])
+def verify():
+    if request.method == 'POST':
+        pin = request.form['pin']
+        if pin == PIN:
+            session['verified'] = True
+            return redirect(url_for('home'))
+    return render_template('verify.html')
+
+@app.route('/')
+def root():
+    if 'verified' in session:
+        return redirect(url_for('home'))  # Redirect verified users to home
+    else:
+        return redirect(url_for('verify'))
+    
+# Check if client has used the same pass+name and validate PIN if provided
+@app.route('/check_unique', methods=['POST'])
+def check_unique():
+    data = request.get_json()
+    name = data['name']
+    password = data['password']
+    pin = data.get('pin', '')
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    
+    for player in players:
+        if player['name'] == name:
+            if player['password'] == hashed_password:
+                if pin and pin == player.get('pin'):
+                    return jsonify({'unique': True, 'existing': True})
+                else:
+                    return jsonify({'unique': False})
+            else:
+                return jsonify({'unique': False})
+    return jsonify({'unique': True, 'existing': False})
+
+
+# Handle client connection
+@socketio.on('client_connected')
+def handle_client_connected(data):
+    name = data['name']
+    password = data['password']
+    color = data['color']
+    pin = data.get('pin', '')
+    ip_address = request.remote_addr
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    date_of_submission = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Check if the client is reconnecting with existing credentials
+    for player in players:
+        if player['name'] == name and player['password'] == hashed_password:
+            if pin == player['pin']:
+                player_info = player
+                break
+    else:
+        # Generate a new PIN for new clients
+        pin = str(random.randint(100000, 999999))
+        player_info = {'name': name, 'ip': ip_address, 'password': hashed_password, 'color': color, 'pin': pin, 'date_of_submission': date_of_submission}
+        players.append(player_info)
+        save_players(players)
+
+        # Load the Pokémon data from the JSON file
+        with open('pokemon_data_full.json', 'r') as f:
+            pokemon_data = json.load(f)
+
+        # Select a random Pokémon
+        random_pokemon = random.choice(pokemon_data)
+
+        # Create a name_PIN.json file in players_pokemon folder
+        os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
+        namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
+
+        # Write the selected Pokémon data to the JSON file
+        with open(namePIN_file_path, 'w') as f:
+            json.dump(random_pokemon, f, indent=4)
+
+    emit('new_client', player_info, broadcast=True)
+    emit('client_pin', {'pin': pin})
+
+@app.route('/server')
+@verify_required
+def home():
+    return render_template('server.html', players=players)
+
+@app.route('/client', methods=['GET'])
+def client_page():
+    return render_template('client.html')
+# ----------- POKEMON --------------
+
+@app.route('/spawn_pokemon', methods=['POST'])
+def spawn_pokemon():
+    global spawned_pokemon
+    data = request.get_json()
+    spawned_pokemon.append(data)
+    save_pokemon_data()
+    return jsonify({'status': 'success'})
+
+@app.route('/despawn_pokemon', methods=['POST'])
+def despawn_pokemon():
+    global spawned_pokemon
+    data = request.get_json()
+    # Find and remove the pokemon from spawned_pokemon
+    for i, pokemon in enumerate(spawned_pokemon):
+        if pokemon['position'] == data['position']:
+            del spawned_pokemon[i]
+            break
+    save_pokemon_data()
+    return jsonify({'status': 'success'})
+
+@app.route('/pokemon_data', methods=['GET'])
+def get_pokemon_data():
+    return jsonify(spawned_pokemon)
+
+def save_pokemon_data():
+    with open('pokemon_data.json', 'w') as f:
+        json.dump(spawned_pokemon, f)
+
+# ----------- PLAYER --------------
+
+@app.route('/place_player', methods=['POST'])
+def place_player():
+    global joined_player
+    data = request.get_json()
+    joined_player.append(data)
+    save_player_data()
+    return jsonify({'status': 'success'})
+
+@app.route('/player_data', methods=['GET'])
+def get_player_data():
+    # Read data from player_data.json file
+    with open('player_data.json', 'r') as f:
+        player_data = json.load(f)
+
+    # Transform the data to match the client-side expectation
+    transformed_data = []
+    for player in player_data:
+        transformed_data.append({
+            'x': player['position']['x'],
+            'y': player['position']['y'],
+            'color': player['color'],
+            'name': player['name']
+        })
+
+    return jsonify(transformed_data)
+
+def save_player_data():
+    with open('player_data.json', 'w') as f:
+        json.dump(joined_player, f)
+
+# ----------- CLEAR --------------
+
+def update_json_file():
+    # This function is called every second to update the JSON file
+    save_pokemon_data()
+    # Schedule the next update
+    Timer(1, update_json_file).start()
+
+def clear_json_file():
+    # Clear the pokemon_data.json file
+    with open('pokemon_data.json', 'w') as f:
+        json.dump([], f)  # Write an empty list to the file
+        
+        
+    # Clear the player_data.json file
+    with open('player_data.json', 'w') as f:
+        json.dump([], f)  # Write an empty list to the file
+
+# ----------------------------------------------------------------
 
 # Constraint of 2 players
 MAX_USERS = 2
@@ -303,6 +512,21 @@ def handle_switch_pokemon(data):
     emit('pokemon_switched', {'username': username, 'pokemon': users[player_order].pokemon_list[0].name}, broadcast=True)
     emit('turn_change', {'current_turn': current_turn}, broadcast=True)
 
+# -----------------------------------------------------------------------
+
+# Clear session data on the first request after the server starts
+@app.before_request
+def check_clear_session():
+    if app.config['CLEAR_SESSION']:
+        session.clear()
+        app.config['CLEAR_SESSION'] = False
+        
+# ----------------------------------------------------------------------
+
 if __name__ == '__main__':
+    # Clear the JSON file when the server starts
+    clear_json_file()
+    # Start the update timer when the server starts
+    Timer(1, update_json_file).start()
     # app.run(port=8080)
     socketio.run(app,port=8080,debug=True)

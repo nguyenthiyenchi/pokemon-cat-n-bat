@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server</title>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            width: 80%;
+            overflow: auto;
+            position: relative;
+            border: 2px solid black;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
+            grid-template-rows: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
+            gap: 1px;
+        }
+
+        .cell {
+            width: 20px;
+            height: 20px;
+            background-color: lightgreen;
+            border: 1px solid darkgreen;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pokemon {
+            background-color: red;
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+        }
+
+        .player {
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+
+        .right-panel {
+            width: 20%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-left: 1px solid #ccc;
+        }
+
+        .title {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            background-color: #f9f9f9;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .logs {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .button-container {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .button-container button {
+            padding: 10px 20px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="left-panel" id="container">
+        <div class="grid" id="pokeworld">
+            <!-- Grid content goes here -->
+        </div>
+    </div>
+    <div class="right-panel">
+        <div class="title">
+            Catching Logs
+        </div>
+        <div class="logs">
+            User a: pokemon a<br>
+            User b: pokemon d<br>
+            <!-- More logs can be added here -->
+        </div>
+        <div class="button-container">
+            <button>Go Battle</button>
+        </div>
+    </div>
+    <script>
+        const gridSize = 100; // Change this to 100 for a 1000x1000 grid
+        const pokemonsPerWave = 50;
+        const despawnTime = 60000; // 1 minute in in milliseconds
+        const spawnInterval = 12000; // 12 seconds in milliseconds
+        const updateInterval = 1000; // Player moves every second
+
+        const container = document.getElementById('container');
+        const pokeworld = document.getElementById('pokeworld');
+        const cells = [];
+        let playerPosition = { x: 0, y: 0 };
+        let playerDirection = { x: 0, y: 0 };
+        let playerPokemonCount = 0;
+
+        // Initialize the grid
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.x = i;
+                cell.dataset.y = j;
+                pokeworld.appendChild(cell);
+                cells.push(cell);
+            }
+        }
+
+        // Function to get a cell by coordinates
+        function getCell(x, y) {
+            return cells.find(cell => cell.dataset.x == x && cell.dataset.y == y);
+        }
+
+        // Function to spawn a pokemon
+        function spawnPokemon() {
+            let spawnedPokemons = 0;
+            while (spawnedPokemons < pokemonsPerWave) {
+                const randomCell = cells[Math.floor(Math.random() * cells.length)];
+                if (randomCell.children.length === 0) { // Check if the cell is empty
+                    const pokemon = document.createElement('div');
+                    pokemon.classList.add('pokemon');
+                    pokemon.dataset.level = Math.floor(Math.random() * 100) + 1;
+                    pokemon.dataset.ev = (Math.random() * 0.5 + 0.5).toFixed(2);
+
+                    // Send data to server to save
+                    fetch('/spawn_pokemon', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            'position': [parseInt(randomCell.dataset.x), parseInt(randomCell.dataset.y)], 
+                            'level': parseInt(pokemon.dataset.level),
+                            'ev': parseFloat(pokemon.dataset.ev)
+                        })
+                    })
+                    .then(response => {
+                        console.log('Pokemon spawned:', response);
+                    })
+                    .catch(error => {
+                        console.error('Error spawning pokemon:', error);
+                    });
+
+                    randomCell.appendChild(pokemon);
+                    spawnedPokemons++;
+
+                    // Despawn after a set time if not captured
+                    setTimeout(() => {
+                        if (randomCell.contains(pokemon)) {
+                            randomCell.removeChild(pokemon);
+                        }
+                    }, despawnTime);
+                }
+            }
+        }
+
+        // Function to place a player
+        function placePlayer() {
+            fetch('/player_data')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(player => {
+                        // Check if player already exists
+                        if (!players[player.name]) {
+                            // Create a new player element if not present
+                            const cell = getCell(player.x, player.y);
+                            if (cell) {
+                                const playerElement = document.createElement('div');
+                                playerElement.classList.add('player');
+                                playerElement.style.backgroundColor = player.color;
+                                playerElement.dataset.name = player.name;
+                                playerElement.style.borderRadius = '50%';
+                                cell.appendChild(playerElement);
+        
+                                // Store player data in the dictionary
+                                players[player.name] = {
+                                    x: player.x,
+                                    y: player.y,
+                                    color: player.color,
+                                    element: playerElement // Store the element
+                                };
+                            } else {
+                                console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
+                            }
+                        } else {
+                            // Update existing player's position if needed
+                            const cell = getCell(player.x, player.y);
+                            if (cell && players[player.name].element) {
+                                // Update the player element's position (remove old one and add new one)
+                                cell.appendChild(players[player.name].element);
+                                players[player.name].x = player.x;
+                                players[player.name].y = player.y;
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching player data:', error);
+                });
+        }
+
+        // Initial spawn and player placement
+        spawnPokemon();
+        placePlayer();
+
+        // Spawn new pokemons every interval
+        setInterval(spawnPokemon, spawnInterval);
+
+        // Update new players every second
+        setInterval(placePlayer, updateInterval);
+    </script>
+</body>
+</html>

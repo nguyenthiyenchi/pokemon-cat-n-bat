@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container,
+        .input-section {
+            width: 100%;
+            overflow: auto;
+            position: relative;
+            border: 2px solid black;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
+            grid-template-rows: repeat(100, 20px); /* Change 50 to 100 for a 1000x1000 grid */
+            gap: 1px;
+        }
+        
+        .cell {
+            width: 20px;
+            height: 20px;
+            background-color: lightgreen;
+            border: 1px solid darkgreen;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .pokemon {
+            background-color: red;
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+        }
+
+        .player {
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- This is for players to signup/login -->
+    <div id="input-section">
+        <h1>Enter your details:</h1>
+        <input type="text" id="name-input" placeholder="Enter your name">
+        <input type="password" id="password-input" placeholder="Enter your password">
+        <input type="text" id="pin-input" placeholder="Enter PIN (if you have one)">
+        <input type="color" id="color-input" value="#000000">
+        <button onclick="submitDetails()">Submit</button>
+        <div id="error-message" style="color: red;"></div>
+    </div>
+
+    <div class="container" id="container" style="display: none;">
+        <div class="grid" id="pokeworld"></div>
+    </div>
+    <script>        
+        const socket = io();
+
+        const gridSize = 100;
+        const pokemonsPerWave = 50;
+        const despawnTime = 60000;
+        const spawnInterval = 1000;
+        const moveInterval = 1000; // Player moves every second
+
+        const container = document.getElementById('container');
+        const pokeworld = document.getElementById('pokeworld');
+        const cells = [];
+        let playerPosition = { x: 0, y: 0 };
+        let playerDirection = { x: 0, y: 0 };
+        let playerPokemonCount = 0;
+        let playerColor = ""; // Default player color        
+        let playerName = ""; 
+
+        async function submitDetails() {
+            const nameInput = document.getElementById('name-input');
+            const passwordInput = document.getElementById('password-input');
+            const pinInput = document.getElementById('pin-input');
+            const colorInput = document.getElementById('color-input');
+
+            const name = nameInput.value;
+            const password = passwordInput.value;
+            const pin = pinInput.value;
+            const hashedPassword = CryptoJS.SHA256(password).toString();
+            const color = colorInput.value;
+
+            const response = await fetch('/check_unique', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: name, password: hashedPassword, pin: pin })
+            });
+
+            const result = await response.json();
+            if (result.unique) {
+                socket.emit('client_connected', { name: name, password: hashedPassword, color: color, pin: pin });
+                document.getElementById('input-section').style.display = 'none';
+                document.getElementById('container').style.display = 'block';
+                // document.getElementById('logout-button').style.display = 'block';
+                // document.getElementById('delete-button').style.display = 'block';
+            } else {
+                document.getElementById('error-message').textContent = 'Wrong username, password, or PIN. Please try again.';
+            }
+
+            playerColor = colorInput.value;
+            playerName = nameInput.value;
+
+            // Call placePlayer after setting global variables
+            placePlayer();
+        }
+
+        socket.on('client_pin', function(data) {
+            alert("Your PIN: " + data.pin + ". Please remember this PIN for future logins.");
+        });
+
+        // Initialize the grid
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.x = i;
+                cell.dataset.y = j;
+                pokeworld.appendChild(cell);
+                cells.push(cell);
+            }
+        }
+
+        // Function to get a cell by coordinates
+        function getCell(x, y) {
+            return cells.find(cell => cell.dataset.x == x && cell.dataset.y == y);
+        }
+
+        // Function to spawn a pokemon
+        function spawnPokemon() {
+            fetch('/pokemon_data')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(pokemon => {
+                        const cell = getCell(pokemon.position[0], pokemon.position[1]);
+                        if (cell.children.length === 0) { // Check if the cell is empty
+                            const pokemonElement = document.createElement('div');
+                            pokemonElement.classList.add('pokemon');
+                            pokemonElement.dataset.level = pokemon.level;
+                            pokemonElement.dataset.ev = pokemon.ev;
+                            cell.appendChild(pokemonElement);
+
+                            // Despawn after a set time if not captured
+                            setTimeout(() => {
+                                if (cell.contains(pokemonElement)) {
+                                    cell.removeChild(pokemonElement);
+                                }
+                            }, despawnTime);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching pokemon data:', error);
+                });
+        }
+
+        // Function to place the player at a random position
+        function placePlayer() {
+            playerPosition = {
+                x: Math.floor(Math.random() * gridSize),
+                y: Math.floor(Math.random() * gridSize)
+            };
+            const playerCell = getCell(playerPosition.x, playerPosition.y);
+            const player = document.createElement('div');
+            player.classList.add('player');
+            player.style.backgroundColor = playerColor; // Set the player's color
+            
+            playerCell.appendChild(player);
+
+            // Function to send data of placing player
+            fetch('/place_player',{
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({name: playerName, position: playerPosition, color: playerColor})
+            }).then(response => response.json())
+              .catch(error => console.error('Error updating player position:', error));
+            
+        }
+
+        // Function to move the player
+        function movePlayer() {
+            const currentCell = getCell(playerPosition.x, playerPosition.y);
+            if (currentCell && currentCell.querySelector('.player')) {
+                currentCell.removeChild(currentCell.querySelector('.player'));
+            }
+
+            playerPosition.x += playerDirection.x;
+            playerPosition.y += playerDirection.y;
+
+            // Keep player within grid bounds
+            playerPosition.x = (playerPosition.x + gridSize) % gridSize;
+            playerPosition.y = (playerPosition.y + gridSize) % gridSize;
+
+            const newCell = getCell(playerPosition.x, playerPosition.y);
+            const player = document.createElement('div');
+            player.classList.add('player');
+            player.style.backgroundColor = playerColor;
+            newCell.appendChild(player);
+
+            // Capture pokemon if present
+            if (newCell.querySelector('.pokemon')) {
+                const pokemon = newCell.querySelector('.pokemon');
+                alert(`Captured a level ${pokemon.dataset.level} Pokemon with EV ${pokemon.dataset.ev}`);
+                playerPokemonCount++;
+                pokeworld.removeChild(pokemon);
+                //newCell.removeChild(pokemon);
+            }
+
+            // Scroll the container to keep the player in view
+            const playerRect = player.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            if (playerRect.top < containerRect.top || playerRect.bottom > containerRect.bottom) {
+                container.scrollTop = playerRect.top + container.scrollTop - containerRect.top - container.clientHeight / 2 + playerRect.height / 2;
+            }
+            if (playerRect.left < containerRect.left || playerRect.right > containerRect.right) {
+                container.scrollLeft = playerRect.left + container.scrollLeft - containerRect.left - container.clientWidth / 2 + playerRect.width / 2;
+            }
+
+            // Function to update player position
+        }
+
+        // Function to change player direction
+        function changeDirection(event) {
+            switch (event.key) {
+                case 'ArrowUp':
+                    playerDirection = { x: -1, y: 0 };
+                    break;
+                case 'ArrowDown':
+                    playerDirection = { x: 1, y: 0 };
+                    break;
+                case 'ArrowLeft':
+                    playerDirection = { x: 0, y: -1 };
+                    break;
+                case 'ArrowRight':
+                    playerDirection = { x: 0, y: 1 };
+                    break;
+            }
+        }
+
+        // Initial spawn and player placement
+        spawnPokemon();
+
+        // Spawn new pokemons every interval
+        setInterval(spawnPokemon, spawnInterval);
+
+        // Move player every second
+        setInterval(movePlayer, moveInterval);
+
+        // Listen for key presses to change direction
+        window.addEventListener('keydown', changeDirection);
+
+
+    </script>
+</body>
+</html>

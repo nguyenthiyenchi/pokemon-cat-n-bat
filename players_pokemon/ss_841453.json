@@ -1,0 +1,49 @@
+{
+    "abilities": [
+        "Guts",
+        " Steadfast",
+        " No-guard"
+    ],
+    "attack": "100",
+    "catch_rate": "0%",
+    "defense": "70",
+    "description": "It happily carries heavy cargo to toughen up. It willingly does hard work for people.",
+    "egg_groups": [
+        "Human-Like"
+    ],
+    "evolutions": "Machop evolves into Machoke at level 28.",
+    "evs": "2 Attack",
+    "exp": "142",
+    "gender_ratios": "75% \u2642 25% \u2640",
+    "hatch_steps": "5100",
+    "height": "1.5 m",
+    "hp": "80",
+    "image": "https://archives.bulbagarden.net/media/upload/thumb/2/22/0067Machoke.png/70px-0067Machoke.png",
+    "name": "Machoke",
+    "sp_atk": "50",
+    "sp_def": "60",
+    "species": "Superhuman Strength Pok\u00e9mon",
+    "speed": "45",
+    "types": [
+        "fighting"
+    ],
+    "weight": "70.5 kg",
+    "when_attacked": [
+        {
+            "multiplier": "2x",
+            "type": "flying"
+        },
+        {
+            "multiplier": "2x",
+            "type": "psychic"
+        },
+        {
+            "multiplier": "2x",
+            "type": "fairy"
+        },
+        {
+            "multiplier": "",
+            "type": ""
+        }
+    ]
+}
