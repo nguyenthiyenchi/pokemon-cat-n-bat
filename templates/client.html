@@ -221,7 +221,21 @@
             if (newCell.querySelector('.pokemon')) {
                 const pokemon = newCell.querySelector('.pokemon');
                 alert(`Captured a level ${pokemon.dataset.level} Pokemon with EV ${pokemon.dataset.ev}`);
-                playerPokemonCount++;
+                playerPokemonCount++;                
+
+                fetch('/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        x: playerPosition.x,
+                        y: playerPosition.y,
+                        level: pokemon.dataset.level,
+                        ev: pokemon.dataset.ev
+                    })
+                }).then(response => response.json())
+                  .then(data => console.log('Captured:', data))
+                  .catch(error => console.error('Error capturing pokemon:', error));
+                  
                 newCell.removeChild(pokemon); // Remove the Pokémon
 
                 // Add a new element to the same cell
