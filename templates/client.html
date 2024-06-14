@@ -222,8 +222,13 @@
                 const pokemon = newCell.querySelector('.pokemon');
                 alert(`Captured a level ${pokemon.dataset.level} Pokemon with EV ${pokemon.dataset.ev}`);
                 playerPokemonCount++;
-                pokeworld.removeChild(pokemon);
-                //newCell.removeChild(pokemon);
+                newCell.removeChild(pokemon); // Remove the Pokémon
+
+                // Add a new element to the same cell
+                const newElement = document.createElement('div');
+                newElement.classList.add('new-child-class');
+                newElement.textContent = ''; // 
+                newCell.appendChild(newElement);
             }
 
             // Scroll the container to keep the player in view
@@ -238,6 +243,7 @@
 
             // Function to update player position
         }
+
 
         // Function to change player direction
         function changeDirection(event) {

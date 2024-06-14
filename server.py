@@ -86,7 +86,6 @@ def check_unique():
                 return jsonify({'unique': False})
     return jsonify({'unique': True, 'existing': False})
 
-
 # Handle client connection
 @socketio.on('client_connected')
 def handle_client_connected(data):
@@ -111,20 +110,34 @@ def handle_client_connected(data):
         players.append(player_info)
         save_players(players)
 
-        # Load the Pokémon data from the JSON file
-        with open('pokemon_data_full.json', 'r') as f:
-            pokemon_data = json.load(f)
+    # Load the Pokémon data from the JSON file
+    with open('pokemon_data_full.json', 'r') as f:
+        pokemon_data = json.load(f)
 
-        # Select a random Pokémon
-        random_pokemon = random.choice(pokemon_data)
+    # Select a random Pokémon
+    random_pokemon = random.choice(pokemon_data)
 
-        # Create a name_PIN.json file in players_pokemon folder
-        os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
-        namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
+    # Create a name_PIN.json file in players_pokemon folder
+    os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
+    namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
 
-        # Write the selected Pokémon data to the JSON file
+    # Check if the file exists
+    if os.path.exists(namePIN_file_path):
+        # If the file exists, load its current data and append the new Pokémon
+        with open(namePIN_file_path, 'r') as f:
+            current_data = json.load(f)
+        print("Current data before append:", current_data)
+        if not isinstance(current_data, list):
+            current_data = [current_data]
+        current_data.append(random_pokemon)
+        print("Current data after append:", current_data)
+        # Write the updated data back to the file
+        with open(namePIN_file_path, 'a') as f:
+            json.dump(current_data, f, indent=4)
+    else:
+        # If the file does not exist, create a new file and write the new Pokémon data
         with open(namePIN_file_path, 'w') as f:
-            json.dump(random_pokemon, f, indent=4)
+            json.dump([random_pokemon], f, indent=4)
 
     emit('new_client', player_info, broadcast=True)
     emit('client_pin', {'pin': pin})
