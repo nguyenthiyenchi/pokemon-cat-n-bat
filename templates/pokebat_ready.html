@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Battle Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container-ready">
+        <div class="panel player-selection">
+            <p>Player name</p>
+            <h2>Please choose your Pokemons</h2>
+            <input type="text" id="name-input" placeholder="Enter your name"></input>
+            <div class="pokemon-selection">
+                <label for="pokemon1">Pokemon 1 (Default)</label>
+                <select id="pokemon1" style="font-size: 20px; font-weight: 590">
+                    <option value="">Select Pokemon</option>
+                </select>
+            </div>
+            <div class="pokemon-selection">
+                <label for="pokemon2">Pokemon 2</label>
+                <select id="pokemon2" style="font-size: 20px; font-weight: 590">
+                    <option value="">Select Pokemon</option>
+                </select>
+            </div>
+            <div class="pokemon-selection">
+                <label for="pokemon3">Pokemon 3</label>
+                <select id="pokemon3" style="font-size: 20px; font-weight: 590">
+                    <option value="">Select Pokemon</option>
+                </select>
+            </div>
+            <div class="buttons-and-status" > 
+                <button class="ready-button" id="readyButton" onclick="confirmReady()">Ready</button>
+            </div>
+            
+        </div>
+        <div class="panel battle-logs">
+            <p>Battle Details</p> 
+            <h2>Battle Logs</h2>
+            <div class="logs">
+                <p>This panel shows the updates of 2 players, including status (Ready), battle turns, damages, etc.</p>
+                <div id="log-container"></div>
+            </div>
+        </div>
+        <div class="panel opponent">
+            <p>Opponent name</p>
+            <h2>Your opponent is choosing Pokemons ...</h2>
+            <p>Your opponent is choosing Pokemons.</p>
+            <p>The game will start after you and your opponent ready...</p>
+        </div>
+        <!-- <script src="{{ url_for('static', filename='script.js') }}"></script> -->
+        <script src ="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+        <script>
+            var username = 'u1'; // Adjust this dynamically for each player
+            const readyButton = document.querySelector('.ready-button');
+            const selectElements = document.querySelectorAll('select');
+
+            const socket = io();
+            var player_id;
+
+            socket.on('connect', function() {
+                console.log('Connected to server');
+                player_id = socket.id
+            });
+
+            fetch(`/get_pokemon_list/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                    } else {
+                        populateSelectElements(data);
+                    }
+                });
+
+            function populateSelectElements(pokemons) {
+                selectElements.forEach(select => {
+                    pokemons.forEach(pokemon => {
+                        const option = document.createElement('option');
+                        option.value = pokemon.name;
+                        option.text = pokemon.name;
+                        select.appendChild(option);
+                    });
+                });
+            }
+
+
+            function confirmReady() {
+                const usernameInput = document.getElementById('name-input');
+                username = usernameInput.value;
+                const readyButton = document.getElementById('readyButton');
+                const selectedPokemons = Array.from(selectElements).map(select => select.value);
+                sessionStorage.setItem(`selectedPokemons_${username}`, selectedPokemons);
+                console.log(selectedPokemons.length);
+                // Check for duplicates
+                if (new Set(selectedPokemons).size !== selectedPokemons.length ) {
+                    alert("Please select 3 different Pokémon.");
+                    return;
+                }
+                readyButton.disabled = true;
+
+                fetch('/ready', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, player_id, selectedPokemons })
+                }).then(response => response.json())
+                .then(data => {
+                    console.log(data.status);
+                });
+            }
+
+            socket.on('connect', function() {
+                console.log('Connected to server');
+            });
+
+            socket.on('battle_ready', function(data) {
+                console.log(data.message);
+                sessionStorage.setItem('username', username);
+                window.location.href = '/battle';
+              
+            });
+        </script>
+
+    </div>
+</body>
+</html>

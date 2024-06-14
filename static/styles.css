@@ -1,0 +1,237 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-image: url('pokebat_background.jpg'); /* Replace with the actual background image path */
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container-ready, .container-battle {
+    /* display: none; */
+    display: flex; 
+    gap: 50px;
+    padding: 50px;
+    border-radius: 10px;
+    width: 1600px;
+}
+
+.panel {
+    position: relative; /* Needed for pseudo-element positioning */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    min-width: 250px;
+    min-height: 650px;
+    max-width: 30vw;
+    max-height: 70vh;
+    overflow: auto;
+    /* border: 2px solid;  */
+}
+
+.panel::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white; 
+    border-radius: inherit;
+    opacity: 0.8; 
+    z-index: -1; 
+}
+
+.panel h2 {
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    font-size: 40px;
+}
+
+.panel p{
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.pokemon-selection {
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.pokemon-selection label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.pokemon-selection select {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.buttons-and-status {
+    margin-top: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.ready-button, .log-out, .attack, .opponent-status{
+    margin-top: 5px;
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 12px;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.ready-button {
+    background: #4CAF50;
+}
+
+.ready-button:hover {
+    background: #45a049;
+}
+
+.log-out{
+    background-color: coral;
+}
+
+.log-out:hover {
+    background-color: rgb(218, 108, 68);
+}
+
+.attack{
+    background-color: gold;
+}
+
+.attack:hover {
+    background-color: rgb(227, 193, 2);
+}
+
+.attack:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.opponent-status {
+    background-color: black;
+}
+
+.ready-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.battle-logs .logs {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.player-info, .opponent-info {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.battle-logs .logs {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.logs {
+    background-color: white;
+    padding: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    min-height: 470px;
+    border-radius: 5px;
+}
+
+.logs p {
+    margin: 10px 10px;
+    /* margin:  */
+}
+
+.pokemon-info, .opponent-pokemon-info {
+    margin-left: 10px;
+    margin-right: 10px;
+    /* margin-top: 10px;
+    margin-bottom: 10px; */
+    min-height: 260px;
+}
+
+.pokemon, .opponent-pokemon{
+    display: flex;
+    align-items: center;
+    align-content: center;
+    background-color: rgba(255, 255, 255, 0);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-left: 10px; 
+    margin-right: 10px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    opacity: 1; 
+    padding-left: 20px;
+    border-radius: 5px;
+    border-color: rgba(255, 255, 255, 0);
+}
+
+.pokemon:disabled, .opponent-pokemon:disabled{
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.pokemon:hover{
+    background-color: white;
+}
+
+#pokemon-1:hover{
+    background-color: rgba(255, 255, 255, 0);
+}
+
+
+.pokemon-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+#pokemon-1 .pokemon-image, #opponent-pokemon-1 .pokemon-image {
+    width: 70px;
+    height: 70px;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+.pokemon-details p, .opponent-pokemon-details p{
+    align-items: center;
+    margin: 20px;
+    font-size: 20px;
+}
+
+#pokemon-1 .pokemon-details p, #opponent-pokemon-1 .opponent-pokemon-details p{
+    font-size: 30px;
+}
+
+#pokemon-2:disabled, #pokemon-3:disabled  {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+#pokemon-2:disabled:hover, #pokemon-3:disabled:hover {
+    background-color: rgba(255, 255, 255, 0);
+}
