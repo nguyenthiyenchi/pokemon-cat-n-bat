@@ -171,6 +171,20 @@
                     setTimeout(() => {
                         if (randomCell.contains(pokemon)) {
                             randomCell.removeChild(pokemon);
+                            // Send despawn data to server
+                            fetch('/despawn_pokemon', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    'position': [parseInt(randomCell.dataset.x), parseInt(randomCell.dataset.y)]
+                                })
+                            })
+                            .then(response => {
+                                console.log('Pokemon despawned:', response);
+                            })
+                            .catch(error => {
+                                console.error('Error despawning pokemon:', error);
+                            });
                         }
                     }, despawnTime);
                 }
