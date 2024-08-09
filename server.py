@@ -217,9 +217,25 @@ def capture():
 def place_player():
     global joined_player
     data = request.get_json()
-    joined_player.append(data)
+    joined_player.append(data)  # Add player data to the list
+    save_player_data()          # Save the updated list to the JSON file
+    return jsonify({'status': 'success'})
+
+@app.route('/update_player_position', methods=['POST'])
+def update_player_position():
+    global joined_player
+    data = request.get_json()
+    # Update the player's position if they exist
+    for player in joined_player:
+        if player['name'] == data['name']:
+            player['position'] = data['position']
+            break
+    else:
+        # Add the player if they don't exist yet
+        joined_player.append(data)
     save_player_data()
     return jsonify({'status': 'success'})
+
 
 @app.route('/player_data', methods=['GET'])
 def get_player_data():
@@ -239,17 +255,6 @@ def get_player_data():
 
     return jsonify(transformed_data)
 
-@app.route('/update_player_position', methods=['POST'])
-def update_player_position():
-    global joined_player
-    data = request.get_json()
-    # Find the player and update their position
-    for player in joined_player:
-        if player['name'] == data['name']:
-            player['position'] = data['position']
-            break
-    save_player_data()
-    return jsonify({'status': 'success'})
 
 def save_player_data():
     with open('player_data.json', 'w') as f:

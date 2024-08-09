@@ -252,7 +252,7 @@
             
             playerCell.appendChild(player);
 
-            // Function to send data of placing player
+            // Send data of placing player to the server
             fetch('/place_player', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -260,29 +260,6 @@
             }).then(response => response.json())
             .then(data => console.log('Server response:', data))
             .catch(error => console.error('Error updating player position:', error));
-
-
-        }
-
-        // Function to move the player
-        function movePlayer() {
-            const currentCell = getCell(playerPosition.x, playerPosition.y);
-            if (currentCell && currentCell.querySelector('.player')) {
-                currentCell.removeChild(currentCell.querySelector('.player'));
-            }
-
-            playerPosition.x += playerDirection.x;
-            playerPosition.y += playerDirection.y;
-
-            // Keep player within grid bounds
-            playerPosition.x = (playerPosition.x + gridSize) % gridSize;
-            playerPosition.y = (playerPosition.y + gridSize) % gridSize;
-
-            const newCell = getCell(playerPosition.x, playerPosition.y);
-            const player = document.createElement('div');
-            player.classList.add('player');
-            player.style.backgroundColor = playerColor;
-            newCell.appendChild(player);
 
             // Capture pokemon if present
             if (newCell.querySelector('.pokemon')) {
@@ -327,6 +304,61 @@
             // Function to update player position
         }
 
+        function movePlayer() {
+            // Calculate new position
+            const newX = playerPosition.x + playerDirection.x;
+            const newY = playerPosition.y + playerDirection.y;
+
+            // Ensure the player stays within bounds
+            if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+                // Update player position
+                playerPosition.x = newX;
+                playerPosition.y = newY;
+
+                // Update the player's position on the grid
+                const oldCell = getCell(playerPosition.x - playerDirection.x, playerPosition.y - playerDirection.y);
+                const newCell = getCell(playerPosition.x, playerPosition.y);
+
+                if (oldCell && newCell) {
+                    const playerElement = oldCell.querySelector('.player');
+                    if (playerElement) {
+                        oldCell.removeChild(playerElement);
+                        newCell.appendChild(playerElement);
+
+                        // Send updated position to the server
+                        fetch('/update_player_position', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: playerName, position: playerPosition, color: playerColor })
+                        }).then(response => response.json())
+                        .then(data => console.log('Player position updated:', data))
+                        .catch(error => console.error('Error updating player position:', error));
+
+                        // Capture pokemon if present
+                        if (newCell.querySelector('.pokemon')) {
+                            const pokemon = newCell.querySelector('.pokemon');
+                            alert(`Captured a level ${pokemon.dataset.level} Pokemon with EV ${pokemon.dataset.ev}`);
+                            playerPokemonCount++;
+
+                            fetch('/capture', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    x: playerPosition.x,
+                                    y: playerPosition.y,
+                                    level: pokemon.dataset.level,
+                                    ev: pokemon.dataset.ev
+                                })
+                            }).then(response => response.json())
+                            .then(data => console.log('Captured:', data))
+                            .catch(error => console.error('Error capturing pokemon:', error));
+
+                            newCell.removeChild(pokemon); // Remove the Pokémon
+                        }
+                    }
+                }
+            }
+        }
 
 
         // Function to change player direction

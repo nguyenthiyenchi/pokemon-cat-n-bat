@@ -197,38 +197,47 @@
                 .then()
         }
 
-        // Function to place a player
         function placePlayer() {
             fetch('/player_data')
             .then(response => response.json())
             .then(data => {
                 data.forEach(player => {
-                    // Existing code to handle placing or updating players
-                    const cell = getCell(player.x, player.y);
-                    if (cell) {
-                        const playerElement = document.createElement('div');
-                        playerElement.classList.add('player');
-                        playerElement.style.backgroundColor = player.color;
-                        playerElement.dataset.name = player.name;
-                        playerElement.style.borderRadius = '50%';
-                        cell.appendChild(playerElement);
+                    let playerElement = document.querySelector(`.player[data-name="${player.name}"]`);
 
-                        players[player.name] = {
-                            x: player.x,
-                            y: player.y,
-                            color: player.color,
-                            element: playerElement
-                        };
+                    if (playerElement) {
+                        // Update position of the existing player
+                        const currentCell = playerElement.parentNode;
+                        currentCell.removeChild(playerElement);
+
+                        const newCell = getCell(player.x, player.y);
+                        newCell.appendChild(playerElement);
                     } else {
-                        console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
+                        // Create new player element if not already present
+                        const cell = getCell(player.x, player.y);
+                        if (cell) {
+                            playerElement = document.createElement('div');
+                            playerElement.classList.add('player');
+                            playerElement.style.backgroundColor = player.color;
+                            playerElement.dataset.name = player.name;
+                            playerElement.style.borderRadius = '50%';
+                            cell.appendChild(playerElement);
+
+                            players[player.name] = {
+                                x: player.x,
+                                y: player.y,
+                                color: player.color,
+                                element: playerElement
+                            };
+                        } else {
+                            console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
+                        }
                     }
                 });
             })
             .catch(error => console.error('Error fetching player data:', error));
-
-
-
         }
+
+
 
         // Initial spawn and player placement
         spawnPokemon();
