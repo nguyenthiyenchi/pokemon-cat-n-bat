@@ -253,12 +253,15 @@
             playerCell.appendChild(player);
 
             // Function to send data of placing player
-            fetch('/place_player',{
+            fetch('/place_player', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({name: playerName, position: playerPosition, color: playerColor})
+                body: JSON.stringify({ name: playerName, position: playerPosition, color: playerColor })
             }).then(response => response.json())
-              .catch(error => console.error('Error updating player position:', error));
+            .then(data => console.log('Server response:', data))
+            .catch(error => console.error('Error updating player position:', error));
+
+
         }
 
         // Function to move the player
@@ -323,6 +326,7 @@
 
             // Function to update player position
         }
+
 
 
         // Function to change player direction

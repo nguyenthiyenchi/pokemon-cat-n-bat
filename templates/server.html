@@ -191,49 +191,43 @@
             }
         }
 
+        // Function to remove caught Pokemon
+        function catchPokemon() {
+            fetch('/capture')
+                .then()
+        }
+
         // Function to place a player
         function placePlayer() {
             fetch('/player_data')
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(player => {
-                        // Check if player already exists
-                        if (!players[player.name]) {
-                            // Create a new player element if not present
-                            const cell = getCell(player.x, player.y);
-                            if (cell) {
-                                const playerElement = document.createElement('div');
-                                playerElement.classList.add('player');
-                                playerElement.style.backgroundColor = player.color;
-                                playerElement.dataset.name = player.name;
-                                playerElement.style.borderRadius = '50%';
-                                cell.appendChild(playerElement);
-        
-                                // Store player data in the dictionary
-                                players[player.name] = {
-                                    x: player.x,
-                                    y: player.y,
-                                    color: player.color,
-                                    element: playerElement // Store the element
-                                };
-                            } else {
-                                console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
-                            }
-                        } else {
-                            // Update existing player's position if needed
-                            const cell = getCell(player.x, player.y);
-                            if (cell && players[player.name].element) {
-                                // Update the player element's position (remove old one and add new one)
-                                cell.appendChild(players[player.name].element);
-                                players[player.name].x = player.x;
-                                players[player.name].y = player.y;
-                            }
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching player data:', error);
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(player => {
+                    // Existing code to handle placing or updating players
+                    const cell = getCell(player.x, player.y);
+                    if (cell) {
+                        const playerElement = document.createElement('div');
+                        playerElement.classList.add('player');
+                        playerElement.style.backgroundColor = player.color;
+                        playerElement.dataset.name = player.name;
+                        playerElement.style.borderRadius = '50%';
+                        cell.appendChild(playerElement);
+
+                        players[player.name] = {
+                            x: player.x,
+                            y: player.y,
+                            color: player.color,
+                            element: playerElement
+                        };
+                    } else {
+                        console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
+                    }
                 });
+            })
+            .catch(error => console.error('Error fetching player data:', error));
+
+
+
         }
 
         // Initial spawn and player placement

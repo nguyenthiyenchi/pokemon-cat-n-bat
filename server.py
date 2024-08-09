@@ -161,51 +161,54 @@ def save_pokemon_data():
         
 @app.route('/capture', methods=['POST'])
 def capture():
+    global spawned_pokemon
     data = request.get_json()
     # captured_pokemon.append(data)
-    global pokemons
-    # pokemons = [p for p in pokemons if not (p['x'] == data['x'] and p['y'] == data['y'])]
+    for i, pokemon in enumerate(spawned_pokemon):
+        if pokemon['position'] == data['position']:
+            del spawned_pokemon[i]
+            break
     return jsonify({"status": "success", "data": data})
 
-@socketio.on('captured_new_pokemon')
-def handle_captured_new_pokemon(data):
-    print('captured_new_pokemon')
-    global captured_pokemon
-    # Load the Pokémon data from the JSON file
-    name = data.get('username')
-    pin = data.get('pin')
-    pokemon_data = None
-    with open('pokemon_data_full.json', 'r') as f:
-        pokemon_data = json.load(f)
+# @socketio.on('captured_new_pokemon')
+# def handle_captured_new_pokemon(data):
+#     print('captured_new_pokemon')
+#     global captured_pokemon
+#     # Load the Pokémon data from the JSON file
+#     name = data.get('username')
+#     pin = data.get('pin')
+#     pokemon_data = None
+#     with open('pokemon_data_full.json', 'r') as f:
+#         pokemon_data = json.load(f)
 
-    # Select a random Pokémon
-    # Make sure that the pokemon doesn't duplicate
-    random_pokemon = random.choice(pokemon_data)
-    while random_pokemon in captured_pokemon:
-        random_pokemon = random.choice(pokemon_data)
-    captured_pokemon.append(random_pokemon)
+#     # Select a random Pokémon
+#     # Make sure that the pokemon doesn't duplicate
+#     random_pokemon = random.choice(pokemon_data)
+#     while random_pokemon in captured_pokemon:
+#         random_pokemon = random.choice(pokemon_data)
+#     captured_pokemon.append(random_pokemon)
 
-    # Create a name_PIN.json file in players_pokemon folder
-    os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
-    namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
+#     # Create a name_PIN.json file in players_pokemon folder
+#     os.makedirs(PLAYERS_POKEMON_FOLDER, exist_ok=True)
+#     namePIN_file_path = os.path.join(PLAYERS_POKEMON_FOLDER, f"{name}_{pin}.json")
 
-    # # Check if the file exists
-    # if os.path.exists(namePIN_file_path):
-    #     # If the file exists, load its current data and append the new Pokémon
-    #     with open(namePIN_file_path, 'r') as f:
-    #         current_data = json.load(f)
-    #     print("Current data before append:", current_data)
-    #     if not isinstance(current_data, list):
-    #         current_data = [current_data]
-    #     current_data.append(random_pokemon)
-    #     print("Current data after append:", current_data)
-    #     # Write the updated data back to the file
-    #     with open(namePIN_file_path, 'a') as f:
-    #         json.dump(current_data, f, indent=4)
-    # else:
-    #     # If the file does not exist, create a new file and write the new Pokémon data
-    with open(namePIN_file_path, 'w') as f:
-        json.dump(captured_pokemon, f, indent=4)
+#     # # Check if the file exists
+#     # if os.path.exists(namePIN_file_path):
+#     #     # If the file exists, load its current data and append the new Pokémon
+#     #     with open(namePIN_file_path, 'r') as f:
+#     #         current_data = json.load(f)
+#     #     print("Current data before append:", current_data)
+#     #     if not isinstance(current_data, list):
+#     #         current_data = [current_data]
+#     #     current_data.append(random_pokemon)
+#     #     print("Current data after append:", current_data)
+#     #     # Write the updated data back to the file
+#     #     with open(namePIN_file_path, 'a') as f:
+#     #         json.dump(current_data, f, indent=4)
+#     # else:
+#     #     # If the file does not exist, create a new file and write the new Pokémon data
+#     with open(namePIN_file_path, 'w') as f:
+#         json.dump(captured_pokemon, f, indent=4)
 
 
 # ----------- PLAYER --------------
@@ -235,6 +238,18 @@ def get_player_data():
         })
 
     return jsonify(transformed_data)
+
+@app.route('/update_player_position', methods=['POST'])
+def update_player_position():
+    global joined_player
+    data = request.get_json()
+    # Find the player and update their position
+    for player in joined_player:
+        if player['name'] == data['name']:
+            player['position'] = data['position']
+            break
+    save_player_data()
+    return jsonify({'status': 'success'})
 
 def save_player_data():
     with open('player_data.json', 'w') as f:
