@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
     <title>Server</title>
     <style>
         body {
@@ -106,6 +108,9 @@
         </div>
     </div>
     <script>
+    
+        const socket = io.connect();
+
         const gridSize = 100; // Change this to 100 for a 1000x1000 grid
         const pokemonsPerWave = 50;
         const despawnTime = 60000; // 1 minute in in milliseconds
@@ -191,11 +196,6 @@
             }
         }
 
-        // Function to remove caught Pokemon
-        function catchPokemon() {
-            fetch('/capture')
-                .then()
-        }
 
         function placePlayer() {
             fetch('/player_data')
@@ -237,6 +237,16 @@
             .catch(error => console.error('Error fetching player data:', error));
         }
 
+        socket.on('remove_pokemon', (data) => {
+            const { position } = data;
+            const cell = getCell(position[0], position[1]);
+            if (cell && cell.children.length > 0) {
+                const pokemon = cell.querySelector('.pokemon');
+                if (pokemon) {
+                    cell.removeChild(pokemon);
+                }
+            }
+        });
 
 
         // Initial spawn and player placement

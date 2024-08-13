@@ -163,12 +163,19 @@ def save_pokemon_data():
 def capture():
     global spawned_pokemon
     data = request.get_json()
-    # captured_pokemon.append(data)
+
+    # Find and remove the captured Pokemon
     for i, pokemon in enumerate(spawned_pokemon):
-        if pokemon['position'] == data['position']:
+        if pokemon['position'] == [data['x'], data['y']]:
             del spawned_pokemon[i]
+            save_pokemon_data()
             break
+
+    # Notify clients about the capture
+    socketio.emit('remove_pokemon', {'position': [data['x'], data['y']]})
+
     return jsonify({"status": "success", "data": data})
+
 
 # @socketio.on('captured_new_pokemon')
 # def handle_captured_new_pokemon(data):
