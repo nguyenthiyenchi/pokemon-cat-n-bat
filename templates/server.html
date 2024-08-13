@@ -98,9 +98,7 @@
         <div class="title">
             Catching Logs
         </div>
-        <div class="logs">
-            User a: pokemon a<br>
-            User b: pokemon d<br>
+        <div class="logs" id="logs">
             <!-- More logs can be added here -->
         </div>
         <div class="button-container">
@@ -196,7 +194,6 @@
             }
         }
 
-
         function placePlayer() {
             fetch('/player_data')
             .then(response => response.json())
@@ -228,6 +225,7 @@
                                 color: player.color,
                                 element: playerElement
                             };
+
                         } else {
                             console.warn(`Player ${player.name} not found at coordinates: (${player.x}, ${player.y})`);
                         }
@@ -238,12 +236,24 @@
         }
 
         socket.on('remove_pokemon', (data) => {
-            const { position } = data;
+            const { position, name } = data;
             const cell = getCell(position[0], position[1]);
+            
             if (cell && cell.children.length > 0) {
                 const pokemon = cell.querySelector('.pokemon');
                 if (pokemon) {
                     cell.removeChild(pokemon);
+
+                    // Create the message
+                    const message = `${name} caught a Pokémon at position (${position[0]}, ${position[1]})`;
+
+                    // Append the message to the "logs" element
+                    const logsElement = document.getElementById('logs');
+                    if (logsElement) {
+                        const logEntry = document.createElement('p');
+                        logEntry.textContent = message;
+                        logsElement.appendChild(logEntry);
+                    }
                 }
             }
         });
